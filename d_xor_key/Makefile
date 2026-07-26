@@ -60,15 +60,25 @@ format-fix:
 	clang-format -i $(SRC_DIR)/*.c
 	
 test: $(TARGET)
-	@echo "🚀 Running Tests for Credit Card Parser..."
+	@echo "🚀 Running Tests for Agent Decryptor..."
 	@echo "-----------------------------------"
-	@echo "📝 Test 1 (Пример из задания)"
+	@echo "📝 Test 1 (Примеры из задания)"
 	@echo "📥 Input:"
-	@printf "4\n4539-1488-0343-6467\n8273 1232 7352 0569\n79927398713\n1234-5678-9012-345a\n"
+	@printf "6 3\\nAGENT-HELLO\\n1274263c67591b762f3e7c4e73550606501c7346101741542156001d411020\\n1274263c67591b762f3e7c4e73561011521832470652471b7352071f5a1a\\n1274263c67591b762f3e7c4e73561b145a18274102065654275b06525715275201134011\\n"
 	@echo "📤 Output:"
-	@if printf "4\n4539-1488-0343-6467\n8273 1232 7352 0569\n79927398713\n1234-5678-9012-345a\n" | ./$(TARGET); then \
-		echo "\n✅ Status: DONE"; \
+	@if printf "6 3\\nAGENT-HELLO\\n1274263c67591b762f3e7c4e73550606501c7346101741542156001d411020\\n1274263c67591b762f3e7c4e73561011521832470652471b7352071f5a1a\\n1274263c67591b762f3e7c4e73561b145a18274102065654275b06525715275201134011\\n" | ./$(TARGET); then \
+		echo "\\n✅ Status: DONE"; \
 	else \
-		echo "\n❌ Status: FAILED"; \
+		echo "\\n❌ Status: FAILED"; \
+	fi
+	@echo "-----------------------------------"
+	@echo "📝 Test 2 (Примеры из задания)"
+	@echo "📥 Input:"
+	@printf "3 1\\nkey\\n0000005145180811101d040d0e4509190a0d0406160745170412\\n"
+	@echo "📤 Output:"
+	@if printf "3 1\\nkey\\n0000005145180811101d040d0e4509190a0d0406160745170412\\n" | ./$(TARGET); then \
+		echo "\\n✅ Status: DONE"; \
+	else \
+		echo "\\n❌ Status: FAILED"; \
 	fi
 	@echo "-----------------------------------"
