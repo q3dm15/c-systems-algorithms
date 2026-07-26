@@ -7,6 +7,8 @@
 
 #define BUFFER_H_SIZE (MAX_H_LEN + 2)
 
+#define HEX_BASE_VAL ('a' - 10)
+
 typedef struct {
     char h[BUFFER_H_SIZE];
     unsigned int h_len;
@@ -115,7 +117,7 @@ static unsigned char hex_pair_to_byte(char high, char low) {
 static unsigned char hex_char_to_val(char ch) {
     unsigned char error_return = EXIT_SUCCESS;
     if (ch >= '0' && ch <= '9') error_return = ch - '0';
-    if (ch >= 'a' && ch <= 'f') error_return = ch - 'a' + 10;
+    if (ch >= 'a' && ch <= 'f') error_return = ch - HEX_BASE_VAL;
     return error_return;
 }
 
