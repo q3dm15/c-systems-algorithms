@@ -3,68 +3,103 @@
 
 #define MAX_K 64       /* Максимальная длина ключа в байтах */
 #define MAX_M 100      /* Максимальное количество сообщений */
-#define MAX_H_LEN 1000 /* Максимальная длина префикса H (символов/байт) */
+#define MAX_H_LEN 1000 /* Максимальная длина префикса H */
 
-#define MAX_BYTES 100000
-#define MAX_HEX_SYMBOLS (MAX_BYTES * 2)
-
-#define BUFFER_HEX_SIZE (MAX_HEX_SYMBOLS + 2)
 #define BUFFER_H_SIZE (MAX_H_LEN + 2)
 
+typedef struct {
+    char h[BUFFER_H_SIZE];
+    unsigned int h_len;
+    unsigned char k;
+    unsigned char m;
+} CryptoContext;
+
 static int run_application(void);
-static void process(const char *h_buffer, unsigned char k, unsigned char m);
-static void clear_input(void);
-static int read_inputs(unsigned char *k, unsigned char *m);
-static unsigned int read_prefix_h(char *h_buffer, size_t buffer_size);
+static int read_context(CryptoContext *ctx);
+static void process_crypto(const CryptoContext *ctx);
+static void process_line(const CryptoContext *ctx, int is_first_line);
 static unsigned char hex_pair_to_byte(char high, char low);
 static unsigned char hex_char_to_val(char ch);
-static void process_line(const char *h_buffer, unsigned char k);
+static void clear_input(void);
 
 int main(void) { return run_application(); }
 
 static int run_application(void) {
-    unsigned char m, k;
+    CryptoContext ctx = {.h_len = 0, .k = 0, .m = 0};
+    unsigned char error_return = read_context(&ctx);
 
-    unsigned char error_return = read_inputs(&k, &m);
-
+    /* Считываем данные в структуру */
     if (!error_return) {
-        char h[BUFFER_H_SIZE];
-        unsigned int h_len = 0;
+        /* Выполняем обработку на основе контекста */
+        process_crypto(&ctx);
+    }
 
-        h_len = read_prefix_h(h, BUFFER_H_SIZE);
+    return error_return;
+}
 
-        if (h_len < k) {
-            error_return = EXIT_FAILURE;
-        } else {
-            process(h, k, m);
+static int read_context(CryptoContext *ctx) {
+    unsigned char error_return = EXIT_SUCCESS;
+
+    /* Читаем числа k и m */
+    if (scanf("%hhu %hhu", &ctx->k, &ctx->m) != 2) {
+        error_return = EXIT_FAILURE;
+    }
+
+    else if (ctx->k < 1 || ctx->k > MAX_K || ctx->m < 1 || ctx->m > MAX_M) {
+        error_return = EXIT_FAILURE;
+    }
+
+    else {
+        clear_input();
+
+        /* Читаем префикс h */
+        if (fgets(ctx->h, BUFFER_H_SIZE, stdin) != NULL) {
+            while (ctx->h[ctx->h_len] != '\0') {
+                ctx->h_len++;
+            }
+
+            if (ctx->h_len > 0 && ctx->h[ctx->h_len - 1] == '\n') {
+                ctx->h[ctx->h_len - 1] = '\0';
+                ctx->h_len--;
+            }
+
+            /* Длина префикса не должна быть меньше ключа */
+            if (ctx->h_len < ctx->k) {
+                error_return = EXIT_FAILURE;
+            }
         }
     }
 
     return error_return;
 }
 
-static void process(const char *h_buffer, unsigned char k, unsigned char m) {
-    process_line(h_buffer, k);
+static void process_crypto(const CryptoContext *ctx) {
+    /* Обработка первой строки (ключа) */
+    process_line(ctx, 1);
 
-    for (unsigned char i = 1; i < m; i++) {
-        process_line(NULL, k);
+    /* Обработка последующих m-1 строк */
+    for (unsigned char i = 1; i < ctx->m; i++) {
+        process_line(ctx, 0);
     }
 }
 
-static void process_line(const char *h_buffer, unsigned char k) {
+static void process_line(const CryptoContext *ctx, int is_first_line) {
     static unsigned char key[MAX_K];
     int ch1;
     unsigned int byte_count = 0;
 
     while ((ch1 = getchar()) != '\n' && ch1 != EOF) {
         int ch2 = getchar();
+        if (ch2 == EOF || ch2 == '\n') break; /* Защита от неполной hex-пары */
+
         unsigned char cipher_byte = hex_pair_to_byte(ch1, ch2);
 
-        if (h_buffer != NULL && byte_count < k) {
-            key[byte_count] = cipher_byte ^ (unsigned char)h_buffer[byte_count];
+        /* Извлекаем ключ только на первой строке */
+        if (is_first_line && byte_count < ctx->k) {
+            key[byte_count] = cipher_byte ^ (unsigned char)ctx->h[byte_count];
         }
 
-        unsigned char plain_byte = cipher_byte ^ key[byte_count % k];
+        unsigned char plain_byte = cipher_byte ^ key[byte_count % ctx->k];
         putchar(plain_byte);
 
         byte_count++;
@@ -78,48 +113,10 @@ static unsigned char hex_pair_to_byte(char high, char low) {
 }
 
 static unsigned char hex_char_to_val(char ch) {
-    unsigned char ret = EXIT_FAILURE;
-
-    if (ch >= '0' && ch <= '9') {
-        ret = ch - '0';
-    } else if (ch >= 'a' && ch <= 'f') {
-        ret = ch - 'a' + 10;
-    }
-
-    return ret;
-}
-
-static unsigned int read_prefix_h(char *h_buffer, size_t buffer_size) {
-    unsigned int len = 0;
-
-    if (fgets(h_buffer, buffer_size, stdin) != NULL) {
-        while (h_buffer[len] != '\0') {
-            len++;
-        }
-
-        if (len > 0 && h_buffer[len - 1] == '\n') {
-            h_buffer[len - 1] = '\0';
-            len--;
-        }
-    }
-
-    return len;
-}
-
-static int read_inputs(unsigned char *k, unsigned char *m) {
-    unsigned char ret = EXIT_SUCCESS;
-
-    if (scanf("%hhu %hhu", k, m) != 2) {
-        ret = EXIT_FAILURE;
-    }
-
-    else if (*k < 1 || *k > MAX_K || *m < 1 || *m > MAX_M) {
-        ret = EXIT_FAILURE;
-    }
-
-    clear_input();
-
-    return ret;
+    unsigned char error_return = EXIT_SUCCESS;
+    if (ch >= '0' && ch <= '9') error_return = ch - '0';
+    if (ch >= 'a' && ch <= 'f') error_return = ch - 'a' + 10;
+    return error_return;
 }
 
 static void clear_input(void) {
